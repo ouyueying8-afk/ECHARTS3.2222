@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小红书不婚不婚影响因素与情感倾向</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #f9f7fe 0%, #f0f9ff 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            color: #333;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1600px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, #FFA9B9, #FFE0DE, #FFF2F1, #83E1E0);
+            z-index: 1;
+        }
+        
+        .title {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+            padding-bottom: 20px;
+        }
+        
+        .title h1 {
+            color: #333;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #FFA9B9, #83E1E0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 3px;
+            background: linear-gradient(90deg, #FFA9B9, #83E1E0);
+            border-radius: 2px;
+        }
+        
+        #sankey-chart {
+            width: 100%;
+            height: 800px;
+            position: relative;
+        }
+        
+        .node rect {
+            stroke-width: 2px;
+            stroke: #fff;
+            rx: 8px;
+            ry: 8px;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12));
+            transition: all 0.3s ease;
+        }
+        
+        .node rect:hover {
+            filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+            transform: translateY(-3px);
+        }
+        
+        .link {
+            fill: none;
+            opacity: 0.65;
+            transition: opacity 0.3s, stroke-width 0.3s;
+        }
+        
+        .link:hover {
+            opacity: 0.9;
+        }
+        
+        .node-label {
+            font-size: 14px;
+            font-weight: 600;
+            fill: #333;
+            pointer-events: none;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            margin-top: 25px;
+            flex-wrap: wrap;
+            gap: 25px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #555;
+            padding: 8px 15px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            margin-right: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .emotion-indicator {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 10;
+        }
+        
+        .emotion-item {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .emotion-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .emotion-dot.positive {
+            background-color: #FFA9B9;
+        }
+        
+        .emotion-dot.negative {
+            background-color: #83E1E0;
+        }
+        
+        .emotion-dot.neutral {
+            background-color: #A0A0A0;
+        }
+        
+        @media (max-width: 1200px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .title h1 {
+                font-size: 26px;
+            }
+            
+            #sankey-chart {
+                height: 700px;
+            }
+            
+            .emotion-indicator {
+                position: relative;
+                top: 0;
+                right: 0;
+                flex-direction: row;
+                justify-content: center;
+                margin-bottom: 20px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .title h1 {
+                font-size: 22px;
+            }
+            
+            #sankey-chart {
+                height: 600px;
+            }
+            
+            .legend {
+                gap: 15px;
+            }
+            
+            .legend-item {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">
+            <h1>小红书不婚不婚影响因素与情感倾向</h1>
+        </div>
+        
+        <div class="emotion-indicator">
+            <div class="emotion-item">
+                <div class="emotion-dot positive"></div>
+                <span>正面情绪 50%</span>
+            </div>
+            <div class="emotion-item">
+                <div class="emotion-dot negative"></div>
+                <span>负面情绪 40%</span>
+            </div>
+            <div class="emotion-item">
+                <div class="emotion-dot neutral"></div>
+                <span>中性情绪 10%</span>
+            </div>
+        </div>
+        
+        <div id="sankey-chart"></div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FFA9B9;"></div>
+                <span>影响因素大类</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FFE0DE;"></div>
+                <span>细分影响因素</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #FFF2F1;"></div>
+                <span>情感倾向</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #83E1E0;"></div>
+                <span>关联关系</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 数据定义 - 增加更多中间影响因素
+        const data = {
+            nodes: [
+                // 左侧节点：影响因素大类
+                { node: 0, name: "心理状态", category: "left" },
+                { node: 1, name: "社会观念", category: "left" },
+                { node: 2, name: "经济压力", category: "left" },
+                { node: 3, name: "家庭背景", category: "left" },
+                
+                // 中间节点：社会因素细分类 - 增加到16个
+                { node: 4, name: "自我实现需求", category: "middle" },
+                { node: 5, name: "婚姻焦虑", category: "middle" },
+                { node: 6, name: "独立意识增强", category: "middle" },
+                { node: 7, name: "传统观念淡化", category: "middle" },
+                { node: 8, name: "收入不稳定", category: "middle" },
+                { node: 9, name: "高生活成本", category: "middle" },
+                { node: 10, name: "原生家庭影响", category: "middle" },
+                { node: 11, name: "家庭期望压力", category: "middle" },
+                { node: 12, name: "个人空间需求", category: "middle" },
+                { node: 13, name: "职业发展优先", category: "middle" },
+                { node: 14, name: "社交圈影响", category: "middle" },
+                { node: 15, name: "恐婚心理", category: "middle" },
+                { node: 16, name: "高房价压力", category: "middle" },
+                { node: 17, name: "教育成本担忧", category: "middle" },
+                { node: 18, name: "家庭关系模式", category: "middle" },
+                { node: 19, name: "生育观念变化", category: "middle" },
+                
+                // 右侧节点：情感倾向
+                { node: 20, name: "正面情绪", category: "right" },
+                { node: 21, name: "负面情绪", category: "right" },
+                { node: 22, name: "中性情绪", category: "right" }
+            ],
+            links: [
+                // 从影响因素到细分因素
+                { source: 0, target: 4, value: 20 }, // 心理状态 -> 自我实现需求
+                { source: 0, target: 5, value: 18 }, // 心理状态 -> 婚姻焦虑
+                { source: 0, target: 12, value: 15 }, // 心理状态 -> 个人空间需求
+                { source: 0, target: 15, value: 12 }, // 心理状态 -> 恐婚心理
+                
+                { source: 1, target: 6, value: 22 }, // 社会观念 -> 独立意识增强
+                { source: 1, target: 7, value: 20 }, // 社会观念 -> 传统观念淡化
+                { source: 1, target: 14, value: 16 }, // 社会观念 -> 社交圈影响
+                { source: 1, target: 19, value: 14 }, // 社会观念 -> 生育观念变化
+                
+                { source: 2, target: 8, value: 25 }, // 经济压力 -> 收入不稳定
+                { source: 2, target: 9, value: 22 }, // 经济压力 -> 高生活成本
+                { source: 2, target: 16, value: 18 }, // 经济压力 -> 高房价压力
+                { source: 2, target: 17, value: 15 }, // 经济压力 -> 教育成本担忧
+                
+                { source: 3, target: 10, value: 20 }, // 家庭背景 -> 原生家庭影响
+                { source: 3, target: 11, value: 18 }, // 家庭背景 -> 家庭期望压力
+                { source: 3, target: 18, value: 14 }, // 家庭背景 -> 家庭关系模式
+                
+                // 从细分因素到情感倾向
+                // 自我实现需求 -> 情感倾向
+                { source: 4, target: 20, value: 15 }, // 到正面情绪
+                { source: 4, target: 21, value: 4 },  // 到负面情绪
+                { source: 4, target: 22, value: 1 },  // 到中性情绪
+                
+                // 婚姻焦虑 -> 情感倾向
+                { source: 5, target: 20, value: 3 },  // 到正面情绪
+                { source: 5, target: 21, value: 13 }, // 到负面情绪
+                { source: 5, target: 22, value: 2 },  // 到中性情绪
+                
+                // 独立意识增强 -> 情感倾向
+                { source: 6, target: 20, value: 18 }, // 到正面情绪
+                { source: 6, target: 21, value: 3 },  // 到负面情绪
+                { source: 6, target: 22, value: 1 },  // 到中性情绪
+                
+                // 传统观念淡化 -> 情感倾向
+                { source: 7, target: 20, value: 15 }, // 到正面情绪
+                { source: 7, target: 21, value: 4 },  // 到负面情绪
+                { source: 7, target: 22, value: 1 },  // 到中性情绪
+                
+                // 收入不稳定 -> 情感倾向
+                { source: 8, target: 20, value: 3 },  // 到正面情绪
+                { source: 8, target: 21, value: 20 }, // 到负面情绪
+                { source: 8, target: 22, value: 2 },  // 到中性情绪
+                
+                // 高生活成本 -> 情感倾向
+                { source: 9, target: 20, value: 5 },  // 到正面情绪
+                { source: 9, target: 21, value: 15 }, // 到负面情绪
+                { source: 9, target: 22, value: 2 },  // 到中性情绪
+                
+                // 原生家庭影响 -> 情感倾向
+                { source: 10, target: 20, value: 7 },  // 到正面情绪
+                { source: 10, target: 21, value: 11 }, // 到负面情绪
+                { source: 10, target: 22, value: 2 },  // 到中性情绪
+                
+                // 家庭期望压力 -> 情感倾向
+                { source: 11, target: 20, value: 4 },  // 到正面情绪
+                { source: 11, target: 21, value: 12 }, // 到负面情绪
+                { source: 11, target: 22, value: 2 },  // 到中性情绪
+                
+                // 个人空间需求 -> 情感倾向
+                { source: 12, target: 20, value: 12 }, // 到正面情绪
+                { source: 12, target: 21, value: 2 },  // 到负面情绪
+                { source: 12, target: 22, value: 1 },  // 到中性情绪
+                
+                // 职业发展优先 -> 情感倾向
+                { source: 13, target: 20, value: 14 }, // 到正面情绪
+                { source: 13, target: 21, value: 3 },  // 到负面情绪
+                { source: 13, target: 22, value: 1 },  // 到中性情绪
+                
+                // 社交圈影响 -> 情感倾向
+                { source: 14, target: 20, value: 10 }, // 到正面情绪
+                { source: 14, target: 21, value: 5 },  // 到负面情绪
+                { source: 14, target: 22, value: 1 },  // 到中性情绪
+                
+                // 恐婚心理 -> 情感倾向
+                { source: 15, target: 20, value: 2 },  // 到正面情绪
+                { source: 15, target: 21, value: 9 },  // 到负面情绪
+                { source: 15, target: 22, value: 1 },  // 到中性情绪
+                
+                // 高房价压力 -> 情感倾向
+                { source: 16, target: 20, value: 3 },  // 到正面情绪
+                { source: 16, target: 21, value: 13 }, // 到负面情绪
+                { source: 16, target: 22, value: 2 },  // 到中性情绪
+                
+                // 教育成本担忧 -> 情感倾向
+                { source: 17, target: 20, value: 2 },  // 到正面情绪
+                { source: 17, target: 21, value: 11 }, // 到负面情绪
+                { source: 17, target: 22, value: 2 },  // 到中性情绪
+                
+                // 家庭关系模式 -> 情感倾向
+                { source: 18, target: 20, value: 8 },  // 到正面情绪
+                { source: 18, target: 21, value: 5 },  // 到负面情绪
+                { source: 18, target: 22, value: 1 },  // 到中性情绪
+                
+                // 生育观念变化 -> 情感倾向
+                { source: 19, target: 20, value: 11 }, // 到正面情绪
+                { source: 19, target: 21, value: 2 },  // 到负面情绪
+                { source: 19, target: 22, value: 1 }   // 到中性情绪
+            ]
+        };
+
+        // 计算情感比例
+        let positiveTotal = 0, negativeTotal = 0, neutralTotal = 0;
+        data.links.forEach(link => {
+            if (link.target === 20) positiveTotal += link.value;
+            if (link.target === 21) negativeTotal += link.value;
+            if (link.target === 22) neutralTotal += link.value;
+        });
+        
+        const total = positiveTotal + negativeTotal + neutralTotal;
+        console.log(`正面情绪: ${positiveTotal} (${Math.round(positiveTotal/total*100)}%)`);
+        console.log(`负面情绪: ${negativeTotal} (${Math.round(negativeTotal/total*100)}%)`);
+        console.log(`中性情绪: ${neutralTotal} (${Math.round(neutralTotal/total*100)}%)`);
+
+        // 设置尺寸和边距
+        const width = document.getElementById('sankey-chart').clientWidth;
+        const height = 800;
+        const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+
+        // 颜色方案
+        const colors = {
+            left: "#FFA9B9",
+            middle: "#FFE0DE",
+            right: "#FFF2F1",
+            link: "#83E1E0"
+        };
+
+        // 创建SVG容器
+        const svg = d3.select("#sankey-chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // 创建桑基图生成器
+        const sankey = d3.sankey()
+            .nodeWidth(20)
+            .nodePadding(35)
+            .extent([[0, 0], [width - margin.left - margin.right, height - margin.top - margin.bottom]]);
+
+        // 处理数据
+        const graph = sankey({
+            nodes: data.nodes.map(d => Object.assign({}, d)),
+            links: data.links.map(d => Object.assign({}, d))
+        });
+
+        // 绘制链接
+        const link = svg.append("g")
+            .selectAll(".link")
+            .data(graph.links)
+            .enter().append("path")
+            .attr("class", "link")
+            .attr("d", d3.sankeyLinkHorizontal())
+            .attr("stroke-width", d => Math.max(1, d.width))
+            .style("stroke", colors.link)
+            .style("stroke-opacity", 0.65)
+            .on("mouseover", function(event, d) {
+                // 高亮当前链接
+                d3.select(this)
+                    .style("stroke-opacity", 0.9)
+                    .style("stroke-width", Math.max(2, d.width + 1));
+                
+                // 高亮对应的源节点和目标节点
+                const sourceId = d.source.index;
+                const targetId = d.target.index;
+                
+                d3.selectAll(".node rect")
+                    .filter(node => node.index === sourceId || node.index === targetId)
+                    .style("filter", "drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2))");
+                    
+                d3.selectAll(".node-label")
+                    .filter(node => node.index === sourceId || node.index === targetId)
+                    .style("font-weight", "800")
+                    .style("font-size", "15px");
+            })
+            .on("mouseout", function(event, d) {
+                // 恢复链接样式
+                d3.select(this)
+                    .style("stroke-opacity", 0.65)
+                    .style("stroke-width", d => Math.max(1, d.width));
+                
+                // 恢复节点样式
+                d3.selectAll(".node rect")
+                    .style("filter", "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12))");
+                    
+                d3.selectAll(".node-label")
+                    .style("font-weight", "600")
+                    .style("font-size", "14px");
+            });
+
+        // 绘制节点
+        const node = svg.append("g")
+            .selectAll(".node")
+            .data(graph.nodes)
+            .enter().append("g")
+            .attr("class", "node")
+            .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+        // 为节点添加矩形
+        node.append("rect")
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("height", d => d.y1 - d.y0)
+            .attr("width", d => d.x1 - d.x0)
+            .style("fill", d => colors[d.category])
+            .style("stroke", "#fff")
+            .style("stroke-width", 2)
+            .on("mouseover", function(event, d) {
+                // 高亮当前节点
+                d3.select(this)
+                    .style("filter", "drop-shadow(0 10px 20px rgba(0, 0, 0, 0.25))");
+                
+                // 高亮与该节点相关的链接
+                const nodeId = d.index;
+                
+                d3.selectAll(".link")
+                    .filter(link => link.source.index === nodeId || link.target.index === nodeId)
+                    .style("stroke-opacity", 0.9)
+                    .style("stroke-width", link => Math.max(2, link.width + 1));
+                    
+                d3.selectAll(".node-label")
+                    .filter(node => node.index === nodeId)
+                    .style("font-weight", "800")
+                    .style("font-size", "15px");
+            })
+            .on("mouseout", function(event, d) {
+                // 恢复节点样式
+                d3.select(this)
+                    .style("filter", "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.12))");
+                
+                // 恢复链接样式
+                d3.selectAll(".link")
+                    .style("stroke-opacity", 0.65)
+                    .style("stroke-width", link => Math.max(1, link.width));
+                    
+                d3.selectAll(".node-label")
+                    .style("font-weight", "600")
+                    .style("font-size", "14px");
+            });
+
+        // 添加节点标签
+        node.append("text")
+            .attr("class", "node-label")
+            .attr("x", d => {
+                if (d.x0 < width / 4) return d.x1 - d.x0 + 12; // 左侧节点
+                if (d.x0 > width * 3 / 4) return -12; // 右侧节点
+                return (d.x1 - d.x0) / 2; // 中间节点居中
+            })
+            .attr("y", d => (d.y1 - d.y0) / 2)
+            .attr("dy", "0.35em")
+            .attr("text-anchor", d => {
+                if (d.x0 < width / 4) return "start"; // 左侧节点
+                if (d.x0 > width * 3 / 4) return "end"; // 右侧节点
+                return "middle"; // 中间节点居中
+            })
+            .text(d => d.name)
+            .style("font-size", "14px")
+            .style("font-weight", "600")
+            .style("pointer-events", "none");
+
+        // 添加流向动画
+        const animateFlow = () => {
+            link
+                .attr("stroke-dasharray", function(d) {
+                    const length = this.getTotalLength();
+                    return `${length} ${length}`;
+                })
+                .attr("stroke-dashoffset", function(d) {
+                    return this.getTotalLength();
+                })
+                .transition()
+                .duration(4000)
+                .ease(d3.easeLinear)
+                .attr("stroke-dashoffset", 0);
+        };
+
+        // 页面加载后执行动画
+        setTimeout(animateFlow, 800);
+
+        // 响应窗口大小变化
+        window.addEventListener('resize', function() {
+            const newWidth = document.getElementById('sankey-chart').clientWidth;
+            d3.select("#sankey-chart svg").attr("width", newWidth);
+        });
+    </script>
+</body>
+</html>
